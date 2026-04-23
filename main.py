@@ -101,6 +101,10 @@ openai_key = os.getenv("OPENAI_API_KEY", "").strip()
 if openai_key and openai_key != "":
     client = OpenAI(api_key=openai_key)
 
+# Configuration pour pydantic v2
+from pydantic import BaseModel
+from typing import Optional, List
+
 # Configuration Ollama
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "mistral")
