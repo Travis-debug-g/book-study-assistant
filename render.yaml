@@ -3,11 +3,10 @@ services:
   - type: web
     name: book-study-api
     env: python
+    pythonVersion: 3.11.9
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python main.py"
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.9
       - key: OPENAI_API_KEY
         sync: false
     
