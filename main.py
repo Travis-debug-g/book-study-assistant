@@ -1,6 +1,8 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, List
 import os
@@ -24,6 +26,15 @@ load_dotenv()
 
 # Initialiser FastAPI
 app = FastAPI(title="Book Study Assistant API", version="1.0.0")
+
+# Frontend (React build)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_BUILD_DIR = os.path.join(BASE_DIR, "frontend", "build")
+FRONTEND_STATIC_DIR = os.path.join(FRONTEND_BUILD_DIR, "static")
+FRONTEND_INDEX_FILE = os.path.join(FRONTEND_BUILD_DIR, "index.html")
+
+if os.path.isdir(FRONTEND_STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=FRONTEND_STATIC_DIR), name="static")
 
 # Configuration CORS
 app.add_middleware(
@@ -891,6 +902,34 @@ async def health_check():
         "ollama_available": True,  # Ollama est toujours disponible
         "openai_configured": bool(os.getenv("OPENAI_API_KEY"))
     }
+
+
+# Serve React frontend (must be declared after API routes)
+@app.get("/", include_in_schema=False)
+async def serve_frontend_root():
+    if os.path.isfile(FRONTEND_INDEX_FILE):
+        return FileResponse(FRONTEND_INDEX_FILE)
+    return {"message": "Frontend not built. Build the React app to serve the UI."}
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def serve_frontend_spa(full_path: str):
+    """Serve React SPA for non-API routes when the frontend build exists."""
+
+    if full_path.startswith("docs") or full_path == "openapi.json" or full_path.startswith("redoc"):
+        raise HTTPException(status_code=404, detail="Not found")
+
+    if not os.path.isdir(FRONTEND_BUILD_DIR):
+        raise HTTPException(status_code=404, detail="Not found")
+
+    candidate = os.path.join(FRONTEND_BUILD_DIR, full_path)
+    if os.path.isfile(candidate):
+        return FileResponse(candidate)
+
+    if os.path.isfile(FRONTEND_INDEX_FILE):
+        return FileResponse(FRONTEND_INDEX_FILE)
+
+    raise HTTPException(status_code=404, detail="Not found")
 
 if __name__ == "__main__":
     import uvicorn

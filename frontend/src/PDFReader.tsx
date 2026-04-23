@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX, RotateCcw, Loader2, BookOpen } from 'lucide-react';
 import axios from 'axios';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+
 interface PDFReaderProps {
   fileUrl: string;
   filename: string;
@@ -97,7 +99,7 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
         setIsPreloading(prev => ({ ...prev, [nextPage]: true }));
         
         try {
-          const response = await axios.post<PageData>('http://localhost:8001/pdf/page/audio', {
+          const response = await axios.post<PageData>(`${API_BASE_URL}/pdf/page/audio`, {
             file_path: `uploads/${filename}`,
             page_number: nextPage
           });
@@ -118,7 +120,7 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
   const loadPage = async (pageNumber: number) => {
     setIsLoading(true);
     try {
-      const response = await axios.post<PageData>('http://localhost:8001/pdf/page', {
+      const response = await axios.post<PageData>(`${API_BASE_URL}/pdf/page`, {
         file_path: `uploads/${filename}`,
         page_number: pageNumber
       });
@@ -153,7 +155,7 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
   const generatePageAudio = async () => {
     setIsGeneratingAudio(true);
     try {
-      const response = await axios.post<PageData>('http://localhost:8001/pdf/page/audio', {
+      const response = await axios.post<PageData>(`${API_BASE_URL}/pdf/page/audio`, {
         file_path: `uploads/${filename}`,
         page_number: currentPage,
         language: selectedLanguage

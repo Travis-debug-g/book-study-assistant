@@ -3,6 +3,8 @@ import { Upload, BookOpen, FileText, MessageSquare, BarChart3, Quote, Loader2, C
 import axios from 'axios';
 import PDFReader from './PDFReader';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+
 interface ChatRequest {
   text: string;
   question: string;
@@ -118,7 +120,7 @@ const App: React.FC = () => {
     formData.append('file', file);
 
     try {
-      const response = await axios.post<FileUploadResponse>('http://localhost:8001/upload', formData, {
+      const response = await axios.post<FileUploadResponse>(`${API_BASE_URL}/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -139,7 +141,7 @@ const App: React.FC = () => {
     setError('');
 
     try {
-      const response = await axios.post<StudyResponse>('http://localhost:8001/study', {
+      const response = await axios.post<StudyResponse>(`${API_BASE_URL}/study`, {
         text: uploadResult.text,  // Utiliser le texte extrait du fichier uploadé
         task_type: selectedTask,
         language: 'fr'
@@ -159,7 +161,7 @@ const App: React.FC = () => {
     setError('');
 
     try {
-      const response = await axios.post<ChatResponse>('http://localhost:8001/chat', {
+      const response = await axios.post<ChatResponse>(`${API_BASE_URL}/chat`, {
         text: uploadResult.text,
         question: currentQuestion,
         language: 'fr'
@@ -195,7 +197,7 @@ const App: React.FC = () => {
     setError('');
 
     try {
-      const response = await axios.post<TTSResponse>('http://localhost:8001/tts', {
+      const response = await axios.post<TTSResponse>(`${API_BASE_URL}/tts`, {
         text: uploadResult.text,
         language: selectedLanguage,
         speed: playbackSpeed
@@ -515,7 +517,7 @@ const App: React.FC = () => {
           {/* Lecteur PDF avec voix off */}
           {showPDFReader && uploadResult && uploadResult.filename.endsWith('.pdf') && (
             <PDFReader 
-              fileUrl={`http://localhost:8001/pdf/${uploadResult.filename}`}
+              fileUrl={`${API_BASE_URL}/pdf/${uploadResult.filename}`}
               filename={uploadResult.filename}
             />
           )}
