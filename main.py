@@ -99,8 +99,8 @@ class PDFNavigationResponse(BaseModel):
 mistral_client = None
 mistral_key = os.getenv("MISTRAL_API_KEY", "").strip()
 if mistral_key and mistral_key != "":
-    from mistralai import Mistral
-    mistral_client = Mistral(api_key=mistral_key)
+    from mistralai.client import MistralClient
+    mistral_client = MistralClient(api_key=mistral_key)
 
 # Configuration OpenAI (optionnel)
 client = None
@@ -279,7 +279,7 @@ async def chat_with_ollama(text: str, question: str, language: str = "fr") -> st
 async def chat_with_mistral(text: str, question: str, language: str = "fr") -> str:
     """Chat avec Mistral API"""
     try:
-        response = mistral_client.chat.complete(
+        response = mistral_client.chat(
             model="mistral-large-latest",
             messages=[
                 {"role": "system", "content": f"Tu es un assistant expert en analyse de texte. Réponds en {language}."},
@@ -332,7 +332,7 @@ async def process_with_mistral(text: str, task_type: str, language: str = "fr") 
     prompt = prompts.get(task_type, prompts["summary"])
     
     try:
-        response = mistral_client.chat.complete(
+        response = mistral_client.chat(
             model="mistral-large-latest",
             messages=[
                 {"role": "system", "content": f"Tu es un assistant expert en analyse littéraire. Réponds en {language} de manière claire et structurée."},
