@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+.env
+uploads/
+audio_files/
+frontend/node_modules/
+frontend/build/
+.git/
