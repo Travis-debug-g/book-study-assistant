@@ -125,6 +125,14 @@ TTS_ENGINE = os.getenv("TTS_ENGINE", "gtts")  # gtts (gratuit) ou openai (payant
 AUDIO_DIR = "audio_files"
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
+
+@app.get("/audio/{filename}", include_in_schema=False)
+async def get_audio_file(filename: str):
+    filepath = os.path.join(AUDIO_DIR, filename)
+    if not os.path.isfile(filepath):
+        raise HTTPException(status_code=404, detail="Audio not found")
+    return FileResponse(filepath, media_type="audio/mpeg")
+
 def get_available_voices():
     """Obtenir la liste des voix disponibles avec détails"""
     try:
@@ -425,7 +433,7 @@ async def generate_tts_ollama_enhanced(text: str, language: str = "fr", speed: f
             
             # Vérifier si le fichier existe déjà dans le cache
             if os.path.exists(filepath):
-                return f"http://localhost:8001/audio/{filename}"
+                return f"/audio/{filename}"
             
             # Limiter la longueur du texte
             max_length = 5000
@@ -447,7 +455,7 @@ async def generate_tts_ollama_enhanced(text: str, language: str = "fr", speed: f
             engine.save_to_file(text_to_speak, filepath)
             engine.runAndWait()
             
-            return f"http://localhost:8001/audio/{filename}"
+            return f"/audio/{filename}"
             
         except ImportError:
             raise HTTPException(status_code=500, detail="pyttsx3 n'est pas installé. Installez-le avec: pip install pyttsx3")
@@ -472,7 +480,7 @@ async def generate_tts_pyttsx3(text: str, language: str = "fr", speed: float = 1
         
         # Vérifier si le fichier existe déjà dans le cache
         if os.path.exists(filepath):
-            return f"http://localhost:8001/audio/{filename}"
+            return f"/audio/{filename}"
         
         # Limiter la longueur du texte
         max_length = 5000
@@ -494,7 +502,7 @@ async def generate_tts_pyttsx3(text: str, language: str = "fr", speed: float = 1
         engine.save_to_file(text_to_speak, filepath)
         engine.runAndWait()
         
-        return f"http://localhost:8001/audio/{filename}"
+        return f"/audio/{filename}"
         
     except ImportError:
         raise HTTPException(status_code=500, detail="pyttsx3 n'est pas installé. Installez-le avec: pip install pyttsx3")
@@ -516,7 +524,7 @@ async def generate_tts_gtts(text: str, language: str = "fr", speed: float = 1.0)
         
         # Vérifier si le fichier existe déjà dans le cache
         if os.path.exists(filepath):
-            return f"http://localhost:8001/audio/{filename}"
+            return f"/audio/{filename}"
         
         # Lire le texte tel quel, sans ajouter de pauses artificielles
         text_to_speak = text
@@ -537,7 +545,7 @@ async def generate_tts_gtts(text: str, language: str = "fr", speed: float = 1.0)
         with ThreadPoolExecutor() as pool:
             await loop.run_in_executor(pool, tts.save, filepath)
         
-        return f"http://localhost:8001/audio/{filename}"
+        return f"/audio/{filename}"
         
     except ImportError:
         raise HTTPException(status_code=500, detail="gTTS n'est pas installé. Installez-le avec: pip install gtts")
@@ -578,7 +586,7 @@ async def generate_tts_openai(text: str, language: str = "fr", speed: float = 1.
         with ThreadPoolExecutor() as pool:
             await loop.run_in_executor(pool, response.stream_to_file, filepath)
         
-        return f"http://localhost:8000/audio/{filename}"
+        return f"/audio/{filename}"
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur TTS OpenAI: {str(e)}")
@@ -599,7 +607,11 @@ async def generate_tts(text: str, language: str = "fr", speed: float = 1.0) -> s
         return await generate_tts_ollama_enhanced(text, language, speed)
     else:
         print("Utilisation pyttsx3 par défaut")
-        return await generate_tts_pyttsx3(text, language, speed)
+        try:
+            return await generate_tts_pyttsx3(text, language, speed)
+        except Exception as e:
+            print(f"pyttsx3 a échoué, fallback sur gTTS: {str(e)}")
+            return await generate_tts_gtts(text, language, speed)
 def extract_pdf_page_text(file_path: str, page_number: int) -> tuple[str, int]:
     """Extraire le texte d'une page spécifique d'un PDF"""
     try:
