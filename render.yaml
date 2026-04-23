@@ -1,0 +1,22 @@
+services:
+  # Backend FastAPI
+  - type: web
+    name: book-study-api
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python main.py"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9
+      - key: OPENAI_API_KEY
+        sync: false
+    
+  # Frontend React
+  - type: web
+    name: book-study-frontend
+    env: static
+    buildCommand: "cd frontend && npm install && npm run build"
+    staticPublishPath: ./frontend/build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://book-study-api.onrender.com
