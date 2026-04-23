@@ -95,6 +95,13 @@ class PDFNavigationResponse(BaseModel):
     pages: List[int]
     metadata: dict
 
+# Configuration Mistral (recommandé)
+mistral_client = None
+mistral_key = os.getenv("MISTRAL_API_KEY", "").strip()
+if mistral_key and mistral_key != "":
+    from mistralai import Mistral
+    mistral_client = Mistral(api_key=mistral_key)
+
 # Configuration OpenAI (optionnel)
 client = None
 openai_key = os.getenv("OPENAI_API_KEY", "").strip()
@@ -269,10 +276,31 @@ async def chat_with_ollama(text: str, question: str, language: str = "fr") -> st
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur lors du chat Ollama: {str(e)}")
 
+async def chat_with_mistral(text: str, question: str, language: str = "fr") -> str:
+    """Chat avec Mistral API"""
+    try:
+        response = mistral_client.chat.complete(
+            model="mistral-large-latest",
+            messages=[
+                {"role": "system", "content": f"Tu es un assistant expert en analyse de texte. Réponds en {language}."},
+                {"role": "user", "content": f"Texte: {text}\n\nQuestion: {question}"}
+            ],
+            max_tokens=1000,
+            temperature=0.7
+        )
+        return response.choices[0].message.content
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur lors du chat Mistral: {str(e)}")
+
 async def chat_with_llm(text: str, question: str, language: str = "fr") -> str:
-    """Chat avec un modèle de langage (OpenAI ou Ollama)"""
+    """Chat avec un modèle de langage (Mistral, OpenAI ou Ollama)"""
     
-    # Utiliser Ollama par défaut (gratuit)
+    # Utiliser Mistral par défaut
+    if mistral_client:
+        return await chat_with_mistral(text, question, language)
+    
+    # Utiliser Ollama si disponible
     if not client:
         return await chat_with_ollama(text, question, language)
     
@@ -281,21 +309,51 @@ async def chat_with_llm(text: str, question: str, language: str = "fr") -> str:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": f"Tu es un assistant expert en analyse de texte. Base-toi UNIQUEMENT sur le texte fourni pour répondre. Si l'information n'est pas dans le texte, dis-le clairement. Réponds en {language}."},
-                {"role": "user", "content": f"Texte: {text[:4000]}\n\nQuestion: {question}"}
+                {"role": "system", "content": f"Tu es un assistant expert en analyse de texte. Réponds en {language}."},
+                {"role": "user", "content": f"Texte: {text}\n\nQuestion: {question}"}
             ],
-            max_tokens=600,
-            temperature=0.3
+            max_tokens=1000,
+            temperature=0.7
+        )
+        return response.choices[0].message.content
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur lors du chat LLM: {str(e)}")
+
+async def process_with_mistral(text: str, task_type: str, language: str = "fr") -> str:
+    """Traiter le texte avec Mistral API"""
+    prompts = {
+        "summary": f"Tu es un expert en analyse littéraire francophone. Fais un résumé structuré et pertinent du texte suivant en français. Sois concis mais précis. Inclus les idées principales, les thèmes clés et une conclusion percutante. Réponds UNIQUEMENT en français.",
+        "questions": f"Tu es un enseignant francophone expert en analyse de texte. Génère 10 questions variées et pertinentes sur ce texte en français : questions de compréhension, d'analyse critique, de réflexion personnelle et d'interprétation. Les questions doivent stimuler la pensée critique. Réponds UNIQUEMENT en français.",
+        "analysis": f"Tu es un critique littéraire francophone. Fais une analyse approfondie et nuancée de ce texte en français. Identifie les thèmes principaux, le style d'écriture, les techniques littéraires utilisées, les personnages s'il y en a, le contexte et la portée de l'œuvre. Sois précis et analytique. Réponds UNIQUEMENT en français.",
+        "quotes": f"Tu es un expert en littérature francophone. Extrais 5 citations marquantes de ce texte et explique leur signification, leur impact et leur importance dans l'œuvre. Les analyses doivent être profondes et éclairantes. Réponds UNIQUEMENT en français."
+    }
+    
+    prompt = prompts.get(task_type, prompts["summary"])
+    
+    try:
+        response = mistral_client.chat.complete(
+            model="mistral-large-latest",
+            messages=[
+                {"role": "system", "content": f"Tu es un assistant expert en analyse littéraire. Réponds en {language} de manière claire et structurée."},
+                {"role": "user", "content": f"{prompt}\n\nTexte à analyser:\n{text[:4000]}"}
+            ],
+            max_tokens=1000,
+            temperature=0.7
         )
         
         return response.choices[0].message.content
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur lors du chat LLM: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors du traitement Mistral: {str(e)}")
 
 async def process_with_llm(text: str, task_type: str, language: str = "fr") -> str:
-    """Traiter le texte avec un modèle de langage (OpenAI ou Ollama)"""
+    """Traiter le texte avec un modèle de langage (Mistral, OpenAI ou Ollama)"""
     
-    # Utiliser Ollama par défaut (gratuit)
+    # Utiliser Mistral par défaut
+    if mistral_client:
+        return await process_with_mistral(text, task_type, language)
+    
+    # Utiliser Ollama si disponible
     if not client:
         return await process_with_ollama(text, task_type, language)
     
@@ -311,12 +369,12 @@ async def process_with_llm(text: str, task_type: str, language: str = "fr") -> s
     
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",  # Le modèle le moins cher
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": f"Tu es un assistant expert en analyse littéraire. Réponds en {language} de manière claire et structurée."},
-                {"role": "user", "content": f"{prompt}\n\nTexte à analyser:\n{text[:2000]}"}  # Réduit à 2000 caractères pour économiser
+                {"role": "user", "content": f"{prompt}\n\nTexte à analyser:\n{text[:2000]}"}
             ],
-            max_tokens=500,  # Réduit pour économiser
+            max_tokens=500,
             temperature=0.7
         )
         
@@ -882,7 +940,11 @@ async def test_tts_voice(language: str = "en", text: str = None):
 @app.get("/health")
 async def health_check():
     """Vérifier l'état de l'API"""
-    return {"status": "healthy", "api_key_configured": bool(os.getenv("OPENAI_API_KEY"))}
+    return {
+        "status": "healthy", 
+        "mistral_configured": bool(os.getenv("MISTRAL_API_KEY")),
+        "openai_configured": bool(os.getenv("OPENAI_API_KEY"))
+    }
 
 if __name__ == "__main__":
     import uvicorn
