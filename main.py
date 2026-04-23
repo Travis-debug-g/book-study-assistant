@@ -763,8 +763,8 @@ async def chat_with_document(request: ChatRequest):
         raise HTTPException(status_code=500, detail=f"Erreur lors du chat: {str(e)}")
 
 # Routes API
-@app.get("/")
-async def root():
+@app.get("/api", include_in_schema=False)
+async def api_root():
     return {"message": "Book Study Assistant API", "version": "1.0.0"}
 
 @app.post("/upload")
