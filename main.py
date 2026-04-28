@@ -450,7 +450,12 @@ async def generate_tts_ollama_enhanced(text: str, language: str = "fr", speed: f
             
             # Vérifier si le fichier existe déjà dans le cache
             if os.path.exists(filepath):
-                return f"/audio/{filename}"
+                if _is_valid_audio_file(filepath):
+                    return f"/audio/{filename}"
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
             
             # Limiter la longueur du texte
             max_length = 5000
@@ -505,7 +510,12 @@ async def generate_tts_pyttsx3(text: str, language: str = "fr", speed: float = 1
         
         # Vérifier si le fichier existe déjà dans le cache
         if os.path.exists(filepath):
-            return f"/audio/{filename}"
+            if _is_valid_audio_file(filepath):
+                return f"/audio/{filename}"
+            try:
+                os.remove(filepath)
+            except Exception:
+                pass
         
         # Limiter la longueur du texte
         max_length = 5000
@@ -557,7 +567,12 @@ async def generate_tts_gtts(text: str, language: str = "fr", speed: float = 1.0)
         
         # Vérifier si le fichier existe déjà dans le cache
         if os.path.exists(filepath):
-            return f"/audio/{filename}"
+            if _is_valid_audio_file(filepath):
+                return f"/audio/{filename}"
+            try:
+                os.remove(filepath)
+            except Exception:
+                pass
         
         # Lire le texte tel quel, sans ajouter de pauses artificielles
         text_to_speak = text
