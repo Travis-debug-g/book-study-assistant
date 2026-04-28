@@ -704,10 +704,7 @@ async def get_pdf_page_with_audio(request: PDFPageRequest):
     page_text, total_pages = extract_pdf_page_text(request.file_path, request.page_number)
     
     # Générer l'audio pour cette page
-    try:
-        audio_url = await generate_tts(page_text, request.language, 1.0)
-    except Exception as e:
-        audio_url = None
+    audio_url = await generate_tts(page_text, request.language, 1.0)
     
     return PDFPageResponse(
         page_text=page_text,

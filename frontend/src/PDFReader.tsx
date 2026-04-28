@@ -162,10 +162,16 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
         language: selectedLanguage
       });
       
-      setAudioUrl(response.data.audio_url || '');
+      const url = response.data.audio_url || '';
+      if (!url) {
+        setAudioError('La génération audio a échoué. Réessaie dans quelques secondes.');
+      }
+      setAudioUrl(url);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la génération audio:', error);
+      const detail = error?.response?.data?.detail;
+      setAudioError(detail || 'Erreur lors de la génération audio.');
     } finally {
       setIsGeneratingAudio(false);
     }
