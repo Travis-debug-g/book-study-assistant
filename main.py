@@ -125,14 +125,6 @@ TTS_ENGINE = os.getenv("TTS_ENGINE", "gtts")  # gtts (gratuit) ou openai (payant
 AUDIO_DIR = "audio_files"
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
-
-@app.get("/audio/{filename}", include_in_schema=False)
-async def get_audio_file(filename: str):
-    filepath = os.path.join(AUDIO_DIR, filename)
-    if not os.path.isfile(filepath):
-        raise HTTPException(status_code=404, detail="Audio not found")
-    return FileResponse(filepath, media_type="audio/mpeg")
-
 def get_available_voices():
     """Obtenir la liste des voix disponibles avec détails"""
     try:
@@ -428,7 +420,7 @@ async def generate_tts_ollama_enhanced(text: str, language: str = "fr", speed: f
             
             # Créer un hash du texte optimisé pour le cache
             text_hash = hashlib.md5(f"ollama_{optimized_text}_{language}_{speed}".encode()).hexdigest()
-            filename = f"tts_ollama_enhanced_{text_hash}.mp3"
+            filename = f"tts_ollama_enhanced_{text_hash}.wav"
             filepath = os.path.join(AUDIO_DIR, filename)
             
             # Vérifier si le fichier existe déjà dans le cache
@@ -475,7 +467,7 @@ async def generate_tts_pyttsx3(text: str, language: str = "fr", speed: float = 1
         
         # Créer un hash du texte pour le cache
         text_hash = hashlib.md5(f"{text}_{language}_{speed}".encode()).hexdigest()
-        filename = f"tts_pyttsx3_{text_hash}.mp3"
+        filename = f"tts_pyttsx3_{text_hash}.wav"
         filepath = os.path.join(AUDIO_DIR, filename)
         
         # Vérifier si le fichier existe déjà dans le cache
@@ -742,8 +734,13 @@ async def get_audio_file(filename: str):
     
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Fichier audio non trouvé")
-    
-    return FileResponse(file_path, media_type="audio/mpeg")
+
+    if filename.lower().endswith(".wav"):
+        media_type = "audio/wav"
+    else:
+        media_type = "audio/mpeg"
+
+    return FileResponse(file_path, media_type=media_type)
 @app.post("/chat", response_model=ChatResponse)
 async def chat_with_document(request: ChatRequest):
     """Poser une question sur le texte du document"""
