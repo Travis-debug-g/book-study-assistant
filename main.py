@@ -125,6 +125,31 @@ TTS_ENGINE = os.getenv("TTS_ENGINE", "gtts")  # gtts (gratuit) ou openai (payant
 AUDIO_DIR = "audio_files"
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
+def _is_valid_audio_file(filepath: str) -> bool:
+    try:
+        if not os.path.exists(filepath):
+            return False
+        if os.path.getsize(filepath) < 1024:
+            return False
+
+        ext = os.path.splitext(filepath)[1].lower()
+        with open(filepath, "rb") as f:
+            header = f.read(16)
+
+        if ext == ".wav":
+            return header.startswith(b"RIFF")
+
+        if ext == ".mp3":
+            if header.startswith(b"ID3"):
+                return True
+            if len(header) >= 2 and header[0] == 0xFF and (header[1] & 0xE0) == 0xE0:
+                return True
+            return False
+
+        return True
+    except Exception:
+        return False
+
 def get_available_voices():
     """Obtenir la liste des voix disponibles avec détails"""
     try:
@@ -447,7 +472,7 @@ async def generate_tts_ollama_enhanced(text: str, language: str = "fr", speed: f
             engine.save_to_file(text_to_speak, filepath)
             engine.runAndWait()
 
-            if not os.path.exists(filepath) or os.path.getsize(filepath) < 1024:
+            if not _is_valid_audio_file(filepath):
                 try:
                     if os.path.exists(filepath):
                         os.remove(filepath)
@@ -502,7 +527,7 @@ async def generate_tts_pyttsx3(text: str, language: str = "fr", speed: float = 1
         engine.save_to_file(text_to_speak, filepath)
         engine.runAndWait()
 
-        if not os.path.exists(filepath) or os.path.getsize(filepath) < 1024:
+        if not _is_valid_audio_file(filepath):
             try:
                 if os.path.exists(filepath):
                     os.remove(filepath)
@@ -553,7 +578,7 @@ async def generate_tts_gtts(text: str, language: str = "fr", speed: float = 1.0)
         with ThreadPoolExecutor() as pool:
             await loop.run_in_executor(pool, tts.save, filepath)
 
-        if not os.path.exists(filepath) or os.path.getsize(filepath) < 1024:
+        if not _is_valid_audio_file(filepath):
             try:
                 if os.path.exists(filepath):
                     os.remove(filepath)
