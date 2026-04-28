@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX, RotateCcw, Loader2, BookOpen } from 'lucide-react';
 import axios from 'axios';
+import type { AxiosResponse } from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
@@ -109,7 +110,7 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
             });
           };
 
-          let response;
+          let response: AxiosResponse<PageData> | undefined;
           try {
             response = await makeRequest();
           } catch (err: any) {
@@ -121,7 +122,7 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
             }
           }
           
-          if (response.data.audio_url) {
+          if (response?.data?.audio_url) {
             setPreloadedAudio(prev => ({ ...prev, [nextPage]: response.data.audio_url! }));
           }
         } catch (error) {
@@ -180,7 +181,7 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
         });
       };
 
-      let response;
+      let response: AxiosResponse<PageData> | undefined;
       try {
         response = await makeRequest();
       } catch (err: any) {
@@ -193,7 +194,7 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
         }
       }
       
-      const url = response.data.audio_url || '';
+      const url = response?.data?.audio_url || '';
       if (!url) {
         setAudioError('La génération audio a échoué. Réessaie dans quelques secondes.');
       }
