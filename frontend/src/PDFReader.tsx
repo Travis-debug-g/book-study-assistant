@@ -38,6 +38,7 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
   const [highlightEnabled, setHighlightEnabled] = useState<boolean>(true);
   const [highlightSpeed, setHighlightSpeed] = useState<number>(1.05);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('fr');
+  const [audioError, setAudioError] = useState<string>('');
   
   const audioRef = useRef<HTMLAudioElement>(null);
   const pdfRef = useRef<HTMLIFrameElement>(null);
@@ -196,6 +197,7 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
     if (!audioRef.current || !audioUrl) return;
 
     try {
+      setAudioError('');
       if (isPlaying) {
         audioRef.current.pause();
         setCurrentWordIndex(-1); // Arrêter le surlignage
@@ -211,6 +213,8 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
       setIsPlaying(!isPlaying);
     } catch (error) {
       console.error('Erreur lors de la lecture/pause:', error);
+      console.error('Audio URL:', audioUrl);
+      setAudioError('Impossible de lire l\'audio. Le fichier est peut-être invalide ou vide.');
       // Forcer l'état à false en cas d'erreur
       setIsPlaying(false);
       setCurrentWordIndex(-1);
@@ -268,6 +272,9 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
   // Effet pour forcer la vitesse quand l'URL audio change
   useEffect(() => {
     if (audioRef.current && audioUrl) {
+      console.log('Audio URL changed:', audioUrl);
+      audioRef.current.load();
+
       // Petit délai pour s'assurer que l'audio est chargé
       setTimeout(() => {
         if (audioRef.current) {
@@ -557,6 +564,11 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
           {/* Contrôles audio - DÉPLACÉS EN HAUT */}
           {audioUrl && (
             <div className="bg-white rounded-lg p-4 mb-4">
+              {audioError && (
+                <div className="mb-3 rounded bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm">
+                  {audioError}
+                </div>
+              )}
               <div className="flex items-center justify-center gap-3 mb-3">
                 <button
                   onClick={togglePlayPause}

@@ -446,6 +446,14 @@ async def generate_tts_ollama_enhanced(text: str, language: str = "fr", speed: f
             # Sauvegarder dans un fichier
             engine.save_to_file(text_to_speak, filepath)
             engine.runAndWait()
+
+            if not os.path.exists(filepath) or os.path.getsize(filepath) < 1024:
+                try:
+                    if os.path.exists(filepath):
+                        os.remove(filepath)
+                except Exception:
+                    pass
+                raise HTTPException(status_code=500, detail="Erreur TTS pyttsx3: fichier audio invalide")
             
             return f"/audio/{filename}"
             
@@ -493,6 +501,14 @@ async def generate_tts_pyttsx3(text: str, language: str = "fr", speed: float = 1
         # Sauvegarder dans un fichier
         engine.save_to_file(text_to_speak, filepath)
         engine.runAndWait()
+
+        if not os.path.exists(filepath) or os.path.getsize(filepath) < 1024:
+            try:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+            except Exception:
+                pass
+            raise HTTPException(status_code=500, detail="Erreur TTS pyttsx3: fichier audio invalide")
         
         return f"/audio/{filename}"
         
@@ -536,6 +552,14 @@ async def generate_tts_gtts(text: str, language: str = "fr", speed: float = 1.0)
         loop = asyncio.get_event_loop()
         with ThreadPoolExecutor() as pool:
             await loop.run_in_executor(pool, tts.save, filepath)
+
+        if not os.path.exists(filepath) or os.path.getsize(filepath) < 1024:
+            try:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+            except Exception:
+                pass
+            raise HTTPException(status_code=500, detail="Erreur TTS gTTS: fichier audio invalide")
         
         return f"/audio/{filename}"
         
@@ -740,7 +764,9 @@ async def get_audio_file(filename: str):
     else:
         media_type = "audio/mpeg"
 
-    return FileResponse(file_path, media_type=media_type)
+    response = FileResponse(file_path, media_type=media_type)
+    response.headers["Cache-Control"] = "no-store"
+    return response
 @app.post("/chat", response_model=ChatResponse)
 async def chat_with_document(request: ChatRequest):
     """Poser une question sur le texte du document"""
