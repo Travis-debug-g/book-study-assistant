@@ -606,8 +606,12 @@ async def generate_tts_gtts(text: str, language: str = "fr", speed: float = 1.0)
     except ImportError:
         raise HTTPException(status_code=500, detail="gTTS n'est pas installé. Installez-le avec: pip install gtts")
     except Exception as e:
-        if "429" in str(e):
-            raise HTTPException(status_code=429, detail="Trop de requêtes TTS. Veuillez patienter quelques secondes avant de réessayer.")
+        if "429" in str(e) or "Too Many Requests" in str(e):
+            raise HTTPException(
+                status_code=429,
+                detail="Trop de requêtes TTS. Veuillez patienter quelques secondes avant de réessayer.",
+                headers={"Retry-After": "10"},
+            )
         raise HTTPException(status_code=500, detail=f"Erreur TTS gTTS: {str(e)}")
 
 async def generate_tts_openai(text: str, language: str = "fr", speed: float = 1.0) -> str:

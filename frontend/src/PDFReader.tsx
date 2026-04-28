@@ -39,6 +39,7 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
   const [highlightSpeed, setHighlightSpeed] = useState<number>(1.05);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('fr');
   const [audioError, setAudioError] = useState<string>('');
+  const enablePreload = process.env.NODE_ENV !== 'production';
   
   const audioRef = useRef<HTMLAudioElement>(null);
   const pdfRef = useRef<HTMLIFrameElement>(null);
@@ -94,16 +95,31 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
     waitForAudio();
   };
   const preloadNextPagesAudio = async (startPage: number, count: number = 2) => {
+    if (!enablePreload) return;
     for (let i = 1; i <= count; i++) {
       const nextPage = startPage + i;
       if (nextPage <= totalPages && !preloadedAudio[nextPage] && !isPreloading[nextPage]) {
         setIsPreloading(prev => ({ ...prev, [nextPage]: true }));
         
         try {
-          const response = await axios.post<PageData>(`${API_BASE_URL}/pdf/page/audio`, {
-            file_path: `uploads/${filename}`,
-            page_number: nextPage
-          });
+          const makeRequest = async () => {
+            return axios.post<PageData>(`${API_BASE_URL}/pdf/page/audio`, {
+              file_path: `uploads/${filename}`,
+              page_number: nextPage
+            });
+          };
+
+          let response;
+          try {
+            response = await makeRequest();
+          } catch (err: any) {
+            if (err?.response?.status === 429) {
+              await new Promise(r => setTimeout(r, 11000));
+              response = await makeRequest();
+            } else {
+              throw err;
+            }
+          }
           
           if (response.data.audio_url) {
             setPreloadedAudio(prev => ({ ...prev, [nextPage]: response.data.audio_url! }));
@@ -156,11 +172,26 @@ const PDFReader: React.FC<PDFReaderProps> = ({ fileUrl, filename }) => {
   const generatePageAudio = async () => {
     setIsGeneratingAudio(true);
     try {
-      const response = await axios.post<PageData>(`${API_BASE_URL}/pdf/page/audio`, {
-        file_path: `uploads/${filename}`,
-        page_number: currentPage,
-        language: selectedLanguage
-      });
+      const makeRequest = async () => {
+        return axios.post<PageData>(`${API_BASE_URL}/pdf/page/audio`, {
+          file_path: `uploads/${filename}`,
+          page_number: currentPage,
+          language: selectedLanguage
+        });
+      };
+
+      let response;
+      try {
+        response = await makeRequest();
+      } catch (err: any) {
+        if (err?.response?.status === 429) {
+          setAudioError('Trop de requêtes. Attends 10 secondes puis réessaie...');
+          await new Promise(r => setTimeout(r, 11000));
+          response = await makeRequest();
+        } else {
+          throw err;
+        }
+      }
       
       const url = response.data.audio_url || '';
       if (!url) {
