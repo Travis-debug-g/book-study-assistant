@@ -2,6 +2,9 @@ FROM node:18-slim AS frontend-build
 
 WORKDIR /frontend
 
+ENV NODE_OPTIONS=--max_old_space_size=4096
+ENV CI=false
+
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 
